@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Check UID Facebook</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      padding: 30px;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 25px;
+    }
+    h2 {
+      color: #1877f2;
+      margin-bottom: 25px;
+      font-size: 24px;
+      text-align: center;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #e4e6eb;
+      padding: 12px 15px;
+      text-align: left;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #050505;
+    }
+    tr:hover {
+      background-color: #f5f6f7;
+    }
+    .active {
+      color: #42b72a;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .active::before {
+      content: "•";
+      font-size: 20px;
+    }
+    .inactive {
+      color: #dc3545;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .inactive::before {
+      content: "•";
+      font-size: 20px;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+      }
+      .container {
+        padding: 15px;
+      }
+      th, td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Trạng thái UID Facebook</h2>
+        <button id="send-info-btn">Gửi thông tin UID đã chọn</button>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Chọn</th>
+                <th>UID</th>
+                <th>Ghi chú</th>
+                <th>Trạng thái</th>
+            </thead>
+            <tbody id="uid-status">
+            </tbody>
+        </table>
+    </div>
+
+  <script>
+    const ACCESS_TOKEN = 'EAAQn1uu77xABOZBAKvrx3qMIjfZCGeWtibUK8xeNUKP7mbA107TNjmD6ZAgRNJxc4a3J2XaqHP5ZC81XiNnY8VUwD3Ex9Vi7dyM3C50jDar6UikBrGTKrP7mCugzWBFodhify6mh47FMBJWzXm8FQ3B8vEplI3nyturgZBBZCdkM3yq6GF0ei0nH7u'; // Dán token của bạn vào đây
+    const TELEGRAM_BOT_TOKEN = '7773938869:AAE4ewCX3zhFSESunz6CHo5J3xSxn7wzt1Q';
+    const TELEGRAM_CHAT_ID = '6801318204'; // ID của nhóm hoặc người dùng mà bạn muốn gửi thông báo
+
+    const uidList = [
+      { uid: '100004295881888', note: 'Unlock 583-3tr Thái Văn Giáp' },
+      { uid: '100004539734779', note: 'Tài khoản cá nhân tên Thắng' }
+    ];
+
+    const checkUID = async (uidObj) => {
+      const url = `https://graph.facebook.com/${uidObj.uid}?access_token=${ACCESS_TOKEN}`;
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+        if (data && data.name) {
+          return { uid: uidObj.uid, note: uidObj.note, status: 'Hoạt động', active: true };
+        } else {
+          return { uid: uidObj.uid, note: uidObj.note, status: 'Không hoạt động hoặc không truy cập được', active: false };
+        }
+      } catch (e) {
+        return { uid: uidObj.uid, note: uidObj.note, status: 'Lỗi kết nối hoặc UID sai', active: false };
+      }
+    };
+    
+    const sendTelegram = async (message) => {
+      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      await fetch(telegramUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message
+        })
+      });
+    };
+
+    const updateTable = async () => {
+      const tbody = document.getElementById('uid-status');
+      tbody.innerHTML = '';
+      for (const uidObj of uidList) {
+        const result = await checkUID(uidObj);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input type="checkbox" class="uid-checkbox" value="${result.uid}"></td>
+          <td>${result.uid}</td>
+          <td>${result.note}</td>
+          <td class="${result.active ? 'active' : 'inactive'}">${result.status}</td>
+        `;
+        tbody.appendChild(row);
+      }
+    };
+
+    document.getElementById('send-info-btn').addEventListener('click', async () => {
+        const selectedUIDs = [];
+        const checkboxes = document.querySelectorAll('.uid-checkbox:checked');
+        checkboxes.forEach(checkbox => {
+            selectedUIDs.push(checkbox.value);
+        });
+
+        if (selectedUIDs.length > 0) {
+            const currentTime = new Date().toLocaleString('vi-VN');
+            let message = `🔍 *KIỂM TRA TRẠNG THÁI UID FACEBOOK*\n`;
+            message += `⏰ Thời gian: ${currentTime}\n`;
+            message += `📋 Số lượng UID đã chọn: ${selectedUIDs.length}\n`;
+            message += `\n=========================\n\n`;
+            
+            selectedUIDs.forEach((uid, index) => {
+                const uidObj = uidList.find(obj => obj.uid === uid);
+                const statusElement = document.querySelector(`.uid-checkbox[value="${uid}"]`)
+                    .closest('tr')
+                    .querySelector('td:last-child');
+                const status = statusElement.textContent;
+                const isActive = statusElement.classList.contains('active');
+                
+                message += `📌 *UID ${index + 1}*\n`;
+                message += `🆔 ID: \`${uidObj.uid}\`\n`;
+                message += `📝 Ghi chú: ${uidObj.note}\n`;
+                message += `⚡ Trạng thái: ${isActive ? '🟢' : '🔴'} ${status}\n`;
+                if (index < selectedUIDs.length - 1) {
+                    message += `\n-------------------------\n\n`;
+                }
+            });
+
+            await sendTelegram(message);
+            alert('✅ Thông tin đã được gửi qua Telegram!');
+        } else {
+            alert('⚠️ Vui lòng chọn ít nhất một UID!');
+        }
+    });
+
+    updateTable();
+  </script>
+</body>
+</html>
